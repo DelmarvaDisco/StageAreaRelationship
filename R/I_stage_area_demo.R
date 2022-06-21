@@ -12,6 +12,7 @@
 rm(list=ls(all=TRUE))
 
 #Download packages of interest 
+library(readxl)
 library(stars)
 library(fasterize)
 library(mapview)
@@ -20,14 +21,16 @@ library(sf)
 library(raster)
 library(tidyverse)
 
-#Download relevant data 
-dem<-raster("data/III_output/dem_jr.tif")
-
 #Define master projection (UTM 17)
 p<-"+proj=utm +zone=17 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
 
 #Define scratch workspace
 scratch_dir<-"data/II_temp/"
+
+#download DEM site locations
+dem<-raster("data/III_output/dem_jr.tif")
+sites<-
+
 
 #Plot dem for funzies
 mapview(dem)
@@ -53,9 +56,6 @@ wbt_gaussian_filter(
 
 #Read raster back into workspace
 dem_filter<-raster(paste0(scratch_dir,"dem_filter.tif"))
-
-#Apply simple gausian filter to smooth random errors from DEM
-dem_filter<- focal(dem_fill, w=focalWeight(dem, 2, "Gauss"))
 crs(dem_filter)<-p
 
 #plot Updated dem
@@ -120,14 +120,13 @@ giws<-giws %>%
   mutate(p_a_ratio = AREA/PERIMETER) %>%
   filter(p_a_ratio>2)
 
-#3.4 Export GIW shapefil -------------------------------------------------------
+#3.4 Export GIW shapefile -------------------------------------------------------
 giws$WetID<-seq(1, nrow(giws))
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #4.0 Create stage-area relationships -------------------------------------------
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #4.1 Create function to develop stage discharge relationship -------------------
-
 inundation_fun(n, dem = dem){
 
   #Select GIW of interest
@@ -137,7 +136,7 @@ inundation_fun(n, dem = dem){
   res<-res(dem)[1]
   ext<-raster(extent(giw), res=res)
   dem_giw<-rasterize(giw, ext, field=1)
-  dem_giw<-temp_grd*dem
+  dem_giw<-dem_giw*dem
   
   #Create Minimum Raster
   dem_giw_min<-dem_giw*0+minValue(dem_giw)
