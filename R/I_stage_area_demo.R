@@ -6,7 +6,7 @@
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#1.0 Setup workspace============================================================
+#1.0 Setup workspace------------------------------------------------------------
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #Clear memory
 rm(list=ls(all=TRUE))
@@ -29,8 +29,7 @@ scratch_dir<-"data/II_temp/"
 
 #download DEM site locations
 dem<-raster("data/III_output/dem_jr.tif")
-sites<-
-
+sites<-st_read('data/III_output/jr_sites.shp')
 
 #Plot dem for funzies
 mapview(dem)
@@ -120,21 +119,55 @@ giws<-giws %>%
   mutate(p_a_ratio = AREA/PERIMETER) %>%
   filter(p_a_ratio>2)
 
-#3.4 Export GIW shapefile -------------------------------------------------------
+#3.4 Connect depressions to research sites -------------------------------------
+#Give ID
 giws$WetID<-seq(1, nrow(giws))
+
+#Create function to find giw clostes to each point
+site_fun<-function(n){
+
+  #Select site
+  site<-sites[n,]
+  
+  #Select giws within 50 m of site
+  giw<-giws[st_buffer(site, 50),]
+  
+  #Define distances between site and giws
+  giw<-giw %>% 
+    mutate(dist = st_distance(site, giw, by_element = T))
+  
+  #Filter to closest giw and export
+  export<-giw %>% 
+    st_drop_geometry() %>% 
+    filter(dist == min(dist, na.rm=T)) %>% 
+    select(WetID) %>% 
+    mutate(Site_ID = site$Site_ID)
+  
+  #export results
+  export
+}
+
+#apply function
+site_giw<-lapply(
+    FUN = site_fun, 
+    X = seq(1, nrow(sites))) %>% 
+  bind_rows()
+
+#join to giws
+giws<-left_join(giws, site_giw) %>% drop_na()
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #4.0 Create stage-area relationships -------------------------------------------
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #4.1 Create function to develop stage discharge relationship -------------------
-inundation_fun(n, dem = dem){
+inundation_fun<-function(n){
 
   #Select GIW of interest
   giw<-giws %>% slice(n)
   
   #gather information about raster
-  res<-res(dem)[1]
-  ext<-raster(extent(giw), res=res)
+  r<-res(dem)[1]
+  ext<-raster(extent(giw), res=r)
   dem_giw<-rasterize(giw, ext, field=1)
   dem_giw<-dem_giw*dem
   
@@ -150,13 +183,13 @@ inundation_fun(n, dem = dem){
   inundate<-function(z){
     #Create area and volume rasters on rise in water level (z)
     area   <- Con(dem_giw>(dem_giw_min+z),0,1)
-    volume <- (((z+dem_giw)-dem_giw_min)*area)*res(area)[1]*res(area)[2]
+    volume <- (((z+dem_giw)-dem_giw_min)*area)*(r^2)
     
     #Calculate area and volume based on rasters
     output <- tibble(
-      WetID = giw$WetID,
+      Site_ID = giw$Site_ID,
       z, #Depth (m)
-      area_m = cellStats(area, 'sum')*res(area)[1]*res(area)[2], #area (m^2)
+      area_m = cellStats(area, 'sum')*(r^2), #area (m^2)
       volume_m3 =cellStats(volume, 'sum')) #volume (m^3)
     
     #Export Ouptut
@@ -164,7 +197,7 @@ inundation_fun(n, dem = dem){
   }  
   
   #Apply inundation for different stage values
-  df<-lapply(seq(0,3, 0.1), inundate) %>% bind_rows()
+  df<-lapply(seq(0,2, 0.01), inundate) %>% bind_rows()
   
   #export
   df
@@ -172,19 +205,10 @@ inundation_fun(n, dem = dem){
 }
 
 #4.2 Apply function to individual GIWs -----------------------------------------
-#View GIWs
-mapview(giws)
+df<-lapply(
+    X = seq(1,nrow(giws)), 
+    FUN = inundation_fun) %>% 
+  bind_rows()
 
-test<-inundate_fun(2)
-
-
-
-
-
-
-
-
-
-
-
-
+#4.3 Export --------------------------------------------------------------------
+write_csv(df, "docs/jr_stage_area_relationships.csv")
