@@ -2,7 +2,7 @@
 #Title: Wetland stage-area relationship demo
 #Coder: C. Nathan Jones (cnjones7@ua.edu)
 #Date: 6/21/2022
-#Purpose: Demonstraight wetland stage-area relationship calculations
+#Purpose: Demonstrate wetland stage-area relationship calculations
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -17,8 +17,11 @@ library(stars)
 library(fasterize)
 library(mapview)
 library(whitebox)
+#Was having trouble with installing whitebox. Added this step.
+whitebox::install_whitebox()
 library(sf)
 library(raster)
+library(purrr)
 library(tidyverse)
 
 #Define master projection (UTM 17)
@@ -32,7 +35,7 @@ dem<-raster("data/III_output/dem_jr.tif")
 sites<-st_read('data/III_output/jr_sites.shp')
 
 #Plot dem for funzies
-mapview(dem)
+# mapview(dem)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #2.0 Prep DEM for Analysis -----------------------------------------------------
@@ -57,17 +60,17 @@ wbt_gaussian_filter(
 dem_filter<-raster(paste0(scratch_dir,"dem_filter.tif"))
 crs(dem_filter)<-p
 
-#plot Updated dem
-mapview(dem_filter)
+mapview(dem) + mapview(dem_filter)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #3.0 Define "Root" GIWs --------------------------------------------------------
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #3.1 Use the Stochastic Deprresion Tool to identify deprresions-----------------
 #Export fitlered DEM to workspace
-writeRaster(dem_filter, paste0(scratch_dir,"dem_filter.tif"), overwrite=T)
+# writeRaster(dem_filter, file = paste0(scratch_dir,"dem_filter.tif"), overwrite=T)
 
 #Apply stochastic depression analysis tool
+RNGkind(sample.kind = "Rounding")
 set.seed(100)
 wbt_stochastic_depression_analysis(
   dem = "dem_filter.tif", 
@@ -75,42 +78,101 @@ wbt_stochastic_depression_analysis(
   wd = scratch_dir,
   rmse = 0.18, 
   range = 10, 
-  iterations = 100)
+  iterations = 1000,
+  verbose_mode = TRUE)
 
-#3.2 Define depression based on threshold of occurence in stochastic procedure----
+#3.2 Define depression based on threshold of occurrence in stochastic procedure----
 #Reclass raster (any depression that was delineated less than 80% of the time is out!)
 wbt_reclass(
   input = "giws.tif", 
-  output = "reclass.tif", 
+  output = "reclass_80.tif", 
   reclass_vals = "'0;0;0.8'", 
   wd = scratch_dir)
 wbt_reclass(
-  input = "reclass.tif", 
-  output = "reclass.tif", 
+  input = "reclass_80.tif", 
+  output = "reclass_80.tif", 
   reclass_vals = "'1;0.8;1'", 
   wd = scratch_dir)
 
+#Reclass with 95% threshold
+wbt_reclass(
+  input = "giws.tif", 
+  output = "reclass_95.tif", 
+  reclass_vals = "'0;0;0.95'", 
+  wd = scratch_dir)
+wbt_reclass(
+  input = "reclass_95.tif", 
+  output = "reclass_95.tif", 
+  reclass_vals = "'1;0.95;1'", 
+  wd = scratch_dir)
+
+#Reclass with a 50% threshold
+wbt_reclass(
+  input = "giws.tif", 
+  output = "reclass_50.tif", 
+  reclass_vals = "'0;0;0.5'", 
+  wd = scratch_dir)
+wbt_reclass(
+  input = "reclass_50.tif", 
+  output = "reclass_50.tif", 
+  reclass_vals = "'1;0.5;1'", 
+  wd = scratch_dir)
+
+#Reclass with 97% threshold
+wbt_reclass(
+  input = "giws.tif",
+  output = "reclass_97.tif",
+  reclass_vals = "'0;0;0.97'",
+  wd = scratch_dir)
+wbt_reclass(
+  input = "reclass_97.tif",
+  output = "reclass_97.tif",
+  reclass_vals = "'1;0.97;1'",
+  wd = scratch_dir)
+
+
 #Convert 0 to NA
-giws<-raster(paste0(scratch_dir,"reclass.tif")) 
-giws<-raster::clump(giws)
+giws_80<-raster(paste0(scratch_dir,"reclass_80.tif")) 
+giws_80<-raster::clump(giws_80)
+giws_95<-raster(paste0(scratch_dir,"reclass_95.tif")) 
+giws_95<-raster::clump(giws_95)
+giws_50<-raster(paste0(scratch_dir,"reclass_50.tif")) 
+giws_50<-raster::clump(giws_50)
+giws_97<-raster(paste0(scratch_dir,"reclass_97.tif"))
+giws_97<-raster::clump(giws_97)
+
 
 #Export as polygon
-giws[giws==1]<-NA
-giws<- giws %>% st_as_stars(.) %>% st_as_sf(., merge = TRUE)
+giws_80[giws_80==1]<-NA
+giws_80<- giws_80 %>% st_as_stars(.) %>% st_as_sf(., merge = TRUE)
+giws_95[giws_95==1]<-NA
+giws_95<- giws_95 %>% st_as_stars(.) %>% st_as_sf(., merge = TRUE)
+giws_50[giws_50==1]<-NA
+giws_50<- giws_50 %>% st_as_stars(.) %>% st_as_sf(., merge = TRUE)
+giws_97[giws_97==1]<-NA
+giws_97<- giws_97 %>% st_as_stars(.) %>% st_as_sf(., merge = TRUE)
 
 #Write polygon shapes to workspace
-st_write(giws, paste0(scratch_dir, "giws.shp"), delete_layer=TRUE)
+st_write(giws_80, paste0(scratch_dir, "giws_80.shp"), delete_layer=TRUE)
+st_write(giws_95, paste0(scratch_dir, "giws_95.shp"), delete_layer=TRUE)
+st_write(giws_50, paste0(scratch_dir, "giws_50.shp"), delete_layer=TRUE)
+st_write(giws_97, paste0(scratch_dir, "giws_97.shp"), delete_layer=TRUE)
+
+#Check out the different layers
+mapview::mapview(giws_80) + mapview::mapview(giws_95) +
+mapview::mapview(giws_50) + mapview::mapview(giws_97)
 
 #3.3 Filter depressions---------------------------------------------------------
-#Filter by area and P:A Ratio
+
+#Filter by area and P:A Ratio for 80% stochastic threshold
 wbt_polygon_perimeter(
-  input="giws.shp", 
+  input="giws_80.shp", 
   wd = scratch_dir)
 wbt_polygon_area(
-  input="giws.shp", 
+  input="giws_80.shp", 
   wd = scratch_dir)
-giws<-st_read(paste0(scratch_dir, "giws.shp"))
-giws<-giws %>%
+giws_80<-st_read(paste0(scratch_dir, "giws_80.shp"))
+giws_80<-giws_80 %>%
   #Remove small depressions
   filter(AREA>250) %>%
   #Remove oddly large depressions
@@ -119,47 +181,101 @@ giws<-giws %>%
   mutate(p_a_ratio = AREA/PERIMETER) %>%
   filter(p_a_ratio>2)
 
+#Filter by area and P:A Ratio for the 95% stochastic threshold
+  wbt_polygon_perimeter(
+    input="giws_95.shp", 
+    wd = scratch_dir)
+  wbt_polygon_area(
+    input="giws_95.shp", 
+    wd = scratch_dir)
+  giws_95<-st_read(paste0(scratch_dir, "giws_95.shp"))
+  giws_95<-giws_95 %>%
+    #Remove oddly large depressions
+    filter(AREA<1e5) %>%
+  #Remove ditched depressions
+  mutate(p_a_ratio = AREA/PERIMETER) %>%
+    filter(p_a_ratio>2)
+  
+#Filter by attributes for the 50% stochastic threshold
+  wbt_polygon_perimeter(
+    input="giws_50.shp", 
+    wd = scratch_dir)
+  wbt_polygon_area(
+    input="giws_50.shp", 
+    wd = scratch_dir)
+  giws_50<-st_read(paste0(scratch_dir, "giws_50.shp"))
+  giws_50<-giws_50 %>%
+    #Remove small depressions
+    filter(AREA>250) %>%
+    #Remove oddly large depressions
+    filter(AREA<1e5) %>%
+    #Remove ditched depressions
+    mutate(p_a_ratio = AREA/PERIMETER)
+    # filter(p_a_ratio>2)
+  
+#Filter by attributes for the 99% stochastic threshold
+  wbt_polygon_perimeter(
+    input="giws_97.shp", 
+    wd = scratch_dir)
+  wbt_polygon_area(
+    input="giws_97.shp", 
+    wd = scratch_dir)
+  giws_97<-st_read(paste0(scratch_dir, "giws_97.shp"))
+#No need to filter depressions from giws_99. Even significant wetlands can be large. 
+  
+mapview(giws_97) + mapview(giws_50) + mapview(giws_80) + mapview(giws_95)
+
+
 #3.4 Connect depressions to research sites -------------------------------------
-#Give ID
-giws$WetID<-seq(1, nrow(giws))
-
-#Create function to find giw clostes to each point
-site_fun<-function(n){
-
-  #Select site
-  site<-sites[n,]
-  
-  #Select giws within 50 m of site
-  giw<-giws[st_buffer(site, 50),]
-  
-  #Define distances between site and giws
-  giw<-giw %>% 
-    mutate(dist = st_distance(site, giw, by_element = T))
-  
-  #Filter to closest giw and export
-  export<-giw %>% 
-    st_drop_geometry() %>% 
-    filter(dist == min(dist, na.rm=T)) %>% 
-    select(WetID) %>% 
-    mutate(Site_ID = site$Site_ID)
-  
-  #export results
-  export
-}
-
-#apply function
-site_giw<-lapply(
-    FUN = site_fun, 
-    X = seq(1, nrow(sites))) %>% 
-  bind_rows()
+#Give ID based on row number
+# giws_97$WetID<-seq(1, nrow(giws_97))
+# 
+# #Create function to find giw closest to each point
+# site_fun<-function(sites, giws){
+#   
+#   #Row numbers for each site
+#   n <- seq(1, nrow(sites))
+# 
+#   # #Select site
+#   for(i in sites[n,]){
+#   
+#   #Select giws within 50 m of site
+#   giws<-giws[st_buffer(site, 50),]
+#   
+#   #Define distances between site and giws
+#   giws<-giws %>% 
+#     mutate(dist = st_distance(site, giws, by_element = T))
+#   
+#   #Filter to closest giw and export
+#   export<-giws %>% 
+#     st_drop_geometry() %>% 
+#     filter(dist == min(dist, na.rm=T)) %>% 
+#     select(WetID) %>% 
+#     mutate(Site_ID = site$Site_ID)
+#   
+#   #export results
+#   export
+#   }
+#   
+#   rbind(export)
+#   
+# }
+# 
+# 
+# #apply function
+# site_giws_97 <-map_dfr(.f = site_fun, .x = sites, .y = giws_97) 
+# 
+# site <- sites[n, ]
 
 #join to giws
-giws<-left_join(giws, site_giw) %>% drop_na()
+giws_97<-left_join(giws_97, site_giw) %>% drop_na()
+
+mapview(giws_97) + mapview(giws_95) + mapview(giws_80) + mapview(giws_50) 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #4.0 Create stage-area relationships -------------------------------------------
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#4.1 Create function to develop stage discharge relationship -------------------
+#4.1 Create function to develop stage area relationship -------------------
 inundation_fun<-function(n){
 
   #Select GIW of interest
@@ -206,9 +322,20 @@ inundation_fun<-function(n){
 
 #4.2 Apply function to individual GIWs -----------------------------------------
 df<-lapply(
-    X = seq(1,nrow(giws)), 
+    X = seq(1,nrow(giws_97)), 
     FUN = inundation_fun) %>% 
   bind_rows()
+
+hipso_plot <- ggplot(data = df, 
+                     mapping = aes(x = z,
+                                   y = area_m,
+                                   color = Site_ID)) +
+  geom_line(size = 1.5) +
+  scale_y_continuous() +
+  scale_x_continuous(limits = c(0,1.1)) +
+  theme_bw()
+
+(hipso_plot)
 
 #4.3 Export --------------------------------------------------------------------
 write_csv(df, "docs/jr_stage_area_relationships.csv")
