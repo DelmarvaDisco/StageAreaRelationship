@@ -79,3 +79,4 @@ mapview(dem_crop) + mapview(jr_sites)
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 writeRaster(dem_crop, 'data/III_output/dem_jr.tif', overwrite = TRUE)
 st_write(jr_sites, 'data/III_output/jr_sites.shp', overwrite = TRUE, append = FALSE)
+
