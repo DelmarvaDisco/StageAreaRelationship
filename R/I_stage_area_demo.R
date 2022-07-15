@@ -2,7 +2,7 @@
 #Title: Wetland stage-area relationship demo
 #Coder: C. Nathan Jones (cnjones7@ua.edu)
 #Date: 6/21/2022
-#Purpose: Demonstraight wetland stage-area relationship calculations
+#Purpose: Demonstrate wetland stage-area relationship calculations
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
