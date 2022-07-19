@@ -205,6 +205,7 @@ inundation_fun<-function(n){
 }
 
 #4.2 Apply function to individual GIWs -----------------------------------------
+
 df<-lapply(
     X = seq(1,nrow(giws)), 
     FUN = inundation_fun) %>% 
