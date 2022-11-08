@@ -22,6 +22,7 @@ whitebox::install_whitebox()
 library(sf)
 library(raster)
 library(purrr)
+library(igraph)
 library(tidyverse)
 
 #Define master projection (UTM 17)
@@ -35,7 +36,7 @@ dem<-raster("data/III_output/dem_jr.tif")
 sites<-st_read('data/III_output/jr_sites.shp')
 
 #Plot dem for funzies
-# mapview(dem)
+mapview(dem)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #2.0 Prep DEM for Analysis -----------------------------------------------------
@@ -142,6 +143,19 @@ wbt_reclass(
   reclass_vals = "'1;0.7;1'",
   wd = scratch_dir)
 
+#Reclass with 25% threshold
+wbt_reclass(
+  input = "giws.tif",
+  output = "reclass_25.tif",
+  reclass_vals = "'0;0;0.25'",
+  wd = scratch_dir)
+wbt_reclass(
+  input = "reclass_25.tif",
+  output = "reclass_25.tif",
+  reclass_vals = "'1;0.25;1'",
+  wd = scratch_dir)
+
+
 
 #Convert 0 to NA
 giws_80<-raster(paste0(scratch_dir,"reclass_80.tif")) 
@@ -153,7 +167,9 @@ giws_50<-raster::clump(giws_50)
 giws_97<-raster(paste0(scratch_dir,"reclass_97.tif"))
 giws_97<-raster::clump(giws_97)
 giws_70<-raster(paste0(scratch_dir,"reclass_70.tif"))
-giws_70<-raster::clump(giws_70)
+giws_70<-raster::clump(giws_25)
+giws_25<-raster(paste0(scratch_dir,"reclass_25.tif"))
+giws_25<-raster::clump(giws_25)
 
 
 #Export as polygon
@@ -167,6 +183,8 @@ giws_97[giws_97==1]<-NA
 giws_97<- giws_97 %>% st_as_stars(.) %>% st_as_sf(., merge = TRUE)
 giws_70[giws_70==1]<-NA
 giws_70<- giws_70 %>% st_as_stars(.) %>% st_as_sf(., merge = TRUE)
+giws_25[giws_25==1]<-NA
+giws_25<- giws_25 %>% st_as_stars(.) %>% st_as_sf(., merge = TRUE)
 
 
 #Write polygon shapes to workspace
@@ -175,11 +193,7 @@ st_write(giws_95, paste0(scratch_dir, "giws_95.shp"), delete_layer=TRUE)
 st_write(giws_50, paste0(scratch_dir, "giws_50.shp"), delete_layer=TRUE)
 st_write(giws_97, paste0(scratch_dir, "giws_97.shp"), delete_layer=TRUE)
 st_write(giws_70, paste0(scratch_dir, "giws_70.shp"), delete_layer=TRUE)
-
-#Check out the different layers
-mapview(giws_80) + mapview(giws_95) +
-mapview(giws_50) + mapview(giws_97) +
-mapview(giws_70)
+st_write(giws_25, paste0(scratch_dir, "giws_25.shp"), delete_layer=TRUE)
 
 #3.3 Filter depressions---------------------------------------------------------
 
@@ -259,10 +273,38 @@ giws_80<-giws_80 %>%
     wd = scratch_dir)
   giws_97<-st_read(paste0(scratch_dir, "giws_97.shp")) %>% 
     mutate(p_a_ratio = AREA/PERIMETER)
-#No need to filter depressions from giws_99. Even significant wetlands can be large. 
   
-# mapview(giws_97) + mapview(giws_50) + mapview(giws_80) + 
-# mapview(giws_95) + mapview(giws_70)
+#Filter by attributes for the 25% stochastic threshold
+  wbt_polygon_perimeter(
+    input="giws_25.shp", 
+    wd = scratch_dir)
+  wbt_polygon_area(
+    input="giws_25.shp", 
+    wd = scratch_dir)
+  giws_25<-st_read(paste0(scratch_dir, "giws_25.shp"))
+  giws_25<-giws_25 %>%
+    #Remove small depressions
+    filter(AREA>250) %>%
+    #Remove oddly large depressions
+    filter(AREA<1e5) %>%
+    #Remove ditched depressions
+    mutate(p_a_ratio = AREA/PERIMETER)
+  # filter(p_a_ratio>2)
+  
+  
+#No need to filter depressions from giws_99. Even significant wetlands can be large. 
+p <- "+proj=utm +zone=17 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
+   
+st_crs(giws_97) <- p
+st_crs(giws_25) <- p
+st_crs(giws_50) <- p
+st_crs(giws_80) <- p
+st_crs(giws_95) <- p
+st_crs(giws_70) <- p
+crs(dem) <- p
+
+mapview(giws_97, alpha = 1) + mapview(giws_50, alpha = 0.1) + mapview(giws_80, alpha = 0.4) +
+mapview(giws_95, alpha = 0.6) + mapview(giws_70, alpha = 0.25) + mapview(giws_25, alpha = 0.05) + mapview(dem)
 
 #3.4 Connect depressions to research sites -------------------------------------
 
