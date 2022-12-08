@@ -75,7 +75,8 @@ crs(dem_filter)<-p
 #Apply stochastic depression analysis tool
 RNGkind(sample.kind = "Rounding")
 set.seed(100)
-# !!! Note this step takes a very long time to run. Output is on google drive under giws.tif
+# !!! Note this step takes a very long time to run. Output is on google drive inside the
+# !!! II_temp folder file name = giws.tif. It will save some time. 
 # !!! Took ~1.5 hrs on 16 GB of RAM. Be prepared to do other things while this model 
 # !!! Runs in the background. 
 wbt_stochastic_depression_analysis(
