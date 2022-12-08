@@ -32,11 +32,13 @@ p<-"+proj=utm +zone=17 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
 scratch_dir<-"data/II_temp/"
 
 #download DEM site locations
-dem<-raster("data/III_output/dem_jr.tif")
-sites<-st_read('data/III_output/jr_sites.shp')
+dem<-raster("data/III_output/dem_all.tif")
+
+sites<-st_read('data/III_output/sites_all.shp') %>% 
+  filter(str_detect(Site_ID, "SW"))
 
 #Plot dem for funzies
-mapview(dem)
+mapview(dem) + mapview(sites)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #2.0 Prep DEM for Analysis -----------------------------------------------------
@@ -73,6 +75,9 @@ crs(dem_filter)<-p
 #Apply stochastic depression analysis tool
 RNGkind(sample.kind = "Rounding")
 set.seed(100)
+# !!! Note this step takes a very long time to run. Output is on google drive under giws.tif
+# !!! Took ~1.5 hrs on 16 GB of RAM. Be prepared to do other things while this model 
+# !!! Runs in the background. 
 wbt_stochastic_depression_analysis(
   dem = "dem_filter.tif", 
   output = "giws.tif", 
@@ -167,7 +172,7 @@ giws_50<-raster::clump(giws_50)
 giws_97<-raster(paste0(scratch_dir,"reclass_97.tif"))
 giws_97<-raster::clump(giws_97)
 giws_70<-raster(paste0(scratch_dir,"reclass_70.tif"))
-giws_70<-raster::clump(giws_25)
+giws_70<-raster::clump(giws_70)
 giws_25<-raster(paste0(scratch_dir,"reclass_25.tif"))
 giws_25<-raster::clump(giws_25)
 
@@ -303,7 +308,7 @@ st_crs(giws_95) <- p
 st_crs(giws_70) <- p
 crs(dem) <- p
 
-mapview(giws_97, alpha = 1) + mapview(giws_50, alpha = 0.1) + mapview(giws_80, alpha = 0.4) +
+mapview(giws_50, alpha = 0.1) + mapview(giws_80, alpha = 0.4) +
 mapview(giws_95, alpha = 0.6) + mapview(giws_70, alpha = 0.25) + mapview(giws_25, alpha = 0.05) + mapview(dem)
 
 #3.4 Connect depressions to research sites -------------------------------------
@@ -323,7 +328,7 @@ site_fun<-function(n){
   site<-sites[n,]
 
   #Select giws within 50 m of site
-  giw_x<-giws_x[st_buffer(site, 50),]
+  giw_x<-giws_x[st_buffer(site, 10),]
 
   #Define distances between site and giws
   giw_x<-giw_x %>%
@@ -333,14 +338,14 @@ site_fun<-function(n){
   export<-giw_x %>%
     st_drop_geometry() %>%
     filter(dist == min(dist, na.rm=T)) %>%
-    select(WetID) %>%
+    dplyr::select(WetID) %>%
     mutate(Site_ID = site$Site_ID)
 
   #export results
   export
 }
 
-#Apply function to each stochastic threshold
+#Apply site matching function to each stochastic threshold
 
 #50% threshold
 giws_x <- giws_50
@@ -348,6 +353,7 @@ site_giw<-lapply(FUN = site_fun,
                     X = seq(1, nrow(sites))) %>%
   bind_rows()
 giws_50_matched <-left_join(giws_50, site_giw) %>% drop_na()
+#Clean up environment
 rm(giws_50, giws_x, site_giw)
 
 #80% threshold
@@ -356,6 +362,7 @@ site_giw<-site_giw<-lapply(FUN = site_fun,
                            X = seq(1, nrow(sites))) %>%
   bind_rows()
 giws_80_matched <- left_join(giws_80, site_giw) %>% drop_na()
+#Clean up environment
 rm(giws_80, giws_x, site_giw)
 
 #95% threshold
@@ -364,6 +371,7 @@ site_giw<-site_giw<-lapply(FUN = site_fun,
                            X = seq(1, nrow(sites))) %>%
   bind_rows()
 giws_95_matched <- left_join(giws_95, site_giw) %>% drop_na()
+#Clean up environment
 rm(giws_95, giws_x, site_giw)
 
 #97% threshold
@@ -372,6 +380,7 @@ site_giw<-site_giw<-lapply(FUN = site_fun,
                            X = seq(1, nrow(sites))) %>%
   bind_rows()
 giws_97_matched <- left_join(giws_97, site_giw) %>% drop_na()
+#Clean up environment
 rm(giws_97, giws_x, site_giw)
 
 #70% threshold
@@ -380,12 +389,13 @@ site_giw<-site_giw<-lapply(FUN = site_fun,
                            X = seq(1, nrow(sites))) %>%
   bind_rows()
 giws_70_matched <- left_join(giws_70, site_giw) %>% drop_na()
+#Clean up environment
 rm(giws_70, giws_x, site_giw)
 
 # Look at mapview
 mapview(giws_50_matched) + mapview(giws_80_matched) + 
 mapview(giws_95_matched) + mapview(giws_97_matched) +
-mapview(giws_70_matched)
+mapview(giws_70_matched) + mapview(dem)
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #4.0 Create stage-area relationships -------------------------------------------
@@ -436,7 +446,8 @@ inundation_fun<-function(n){
 
 # Inundation function for 80% threshold (low water; NO merged sites)
 z_low <- 0
-z_high <- 1
+z_high <- 1.25
+
 giws_x <- giws_80_matched
 
 inundate_80 <- lapply(FUN = inundation_fun,
@@ -468,12 +479,13 @@ rm(z_low, z_high, giws_x)
 # rm(z_low, z_high, giws_x)
 
 # Combine different water levles
-inundate_full <- bind_rows(inundate_70, inundate_80, inundate_97)
+# inundate_full <- bind_rows(inundate_70, inundate_80, inundate_97)
 
 # 4.3 Quick check ---------------------------------------------------------
 
-hipso_plot <- ggplot(data = inundate_80 
-                     %>% filter(Site_ID %in% c("XB-SW", "OB-SW")), 
+hipso_plot <- ggplot(data = inundate_80 %>% 
+                       filter(Site_ID %in% c("TS-SW", "BD-SW", "DK-SW", "ND-SW",
+                                             "FN-SW")),
                    mapping = aes(x = z,
                                  y = area_m,
                                  color = Site_ID)) +
@@ -485,4 +497,4 @@ theme_bw()
 (hipso_plot)
 
 #6.0 Export --------------------------------------------------------------------
-write_csv(df, "docs/jr_stage_area_relationships.csv")
+write_csv(inundate_80, "docs/stage_area_relationships.csv")
