@@ -101,30 +101,6 @@ wbt_reclass(
   reclass_vals = "'1;0.8;1'", 
   wd = scratch_dir)
 
-#Reclass with 95% threshold
-wbt_reclass(
-  input = "giws.tif", 
-  output = "reclass_95.tif", 
-  reclass_vals = "'0;0;0.95'", 
-  wd = scratch_dir)
-wbt_reclass(
-  input = "reclass_95.tif", 
-  output = "reclass_95.tif", 
-  reclass_vals = "'1;0.95;1'", 
-  wd = scratch_dir)
-
-#Reclass with a 50% threshold
-wbt_reclass(
-  input = "giws.tif", 
-  output = "reclass_50.tif", 
-  reclass_vals = "'0;0;0.5'", 
-  wd = scratch_dir)
-wbt_reclass(
-  input = "reclass_50.tif", 
-  output = "reclass_50.tif", 
-  reclass_vals = "'1;0.5;1'", 
-  wd = scratch_dir)
-
 #Reclass with 97% threshold
 wbt_reclass(
   input = "giws.tif",
@@ -137,6 +113,18 @@ wbt_reclass(
   reclass_vals = "'1;0.97;1'",
   wd = scratch_dir)
 
+#Reclass with 95% threshold
+wbt_reclass(
+  input = "giws.tif", 
+  output = "reclass_95.tif", 
+  reclass_vals = "'0;0;0.95'", 
+  wd = scratch_dir)
+wbt_reclass(
+  input = "reclass_95.tif", 
+  output = "reclass_95.tif", 
+  reclass_vals = "'1;0.95;1'", 
+  wd = scratch_dir)
+
 #Reclass with 70% threshold
 wbt_reclass(
   input = "giws.tif",
@@ -147,6 +135,18 @@ wbt_reclass(
   input = "reclass_97.tif",
   output = "reclass_97.tif",
   reclass_vals = "'1;0.7;1'",
+  wd = scratch_dir)
+
+#Reclass with a 50% threshold
+wbt_reclass(
+  input = "giws.tif", 
+  output = "reclass_50.tif", 
+  reclass_vals = "'0;0;0.5'", 
+  wd = scratch_dir)
+wbt_reclass(
+  input = "reclass_50.tif", 
+  output = "reclass_50.tif", 
+  reclass_vals = "'1;0.5;1'", 
   wd = scratch_dir)
 
 #Reclass with 25% threshold
@@ -162,46 +162,80 @@ wbt_reclass(
   wd = scratch_dir)
 
 
-
 #Convert 0 to NA
-giws_80<-raster(paste0(scratch_dir,"reclass_80.tif")) 
-giws_80<-raster::clump(giws_80)
-giws_95<-raster(paste0(scratch_dir,"reclass_95.tif")) 
-giws_95<-raster::clump(giws_95)
-giws_50<-raster(paste0(scratch_dir,"reclass_50.tif")) 
-giws_50<-raster::clump(giws_50)
 giws_97<-raster(paste0(scratch_dir,"reclass_97.tif"))
 giws_97<-raster::clump(giws_97)
+
+giws_95<-raster(paste0(scratch_dir,"reclass_95.tif")) 
+giws_95<-raster::clump(giws_95)
+
+giws_80<-raster(paste0(scratch_dir,"reclass_80.tif")) 
+giws_80<-raster::clump(giws_80)
+
 giws_70<-raster(paste0(scratch_dir,"reclass_70.tif"))
 giws_70<-raster::clump(giws_70)
+
+giws_50<-raster(paste0(scratch_dir,"reclass_50.tif")) 
+giws_50<-raster::clump(giws_50)
+
 giws_25<-raster(paste0(scratch_dir,"reclass_25.tif"))
 giws_25<-raster::clump(giws_25)
 
 
 #Export as polygon
-giws_80[giws_80==1]<-NA
-giws_80<- giws_80 %>% st_as_stars(.) %>% st_as_sf(., merge = TRUE)
-giws_95[giws_95==1]<-NA
-giws_95<- giws_95 %>% st_as_stars(.) %>% st_as_sf(., merge = TRUE)
-giws_50[giws_50==1]<-NA
-giws_50<- giws_50 %>% st_as_stars(.) %>% st_as_sf(., merge = TRUE)
 giws_97[giws_97==1]<-NA
 giws_97<- giws_97 %>% st_as_stars(.) %>% st_as_sf(., merge = TRUE)
+
+giws_95[giws_95==1]<-NA
+giws_95<- giws_95 %>% st_as_stars(.) %>% st_as_sf(., merge = TRUE)
+
+giws_80[giws_80==1]<-NA
+giws_80<- giws_80 %>% st_as_stars(.) %>% st_as_sf(., merge = TRUE)
+
 giws_70[giws_70==1]<-NA
 giws_70<- giws_70 %>% st_as_stars(.) %>% st_as_sf(., merge = TRUE)
+
+giws_50[giws_50==1]<-NA
+giws_50<- giws_50 %>% st_as_stars(.) %>% st_as_sf(., merge = TRUE)
+
 giws_25[giws_25==1]<-NA
 giws_25<- giws_25 %>% st_as_stars(.) %>% st_as_sf(., merge = TRUE)
 
 
 #Write polygon shapes to workspace
-st_write(giws_80, paste0(scratch_dir, "giws_80.shp"), delete_layer=TRUE)
-st_write(giws_95, paste0(scratch_dir, "giws_95.shp"), delete_layer=TRUE)
-st_write(giws_50, paste0(scratch_dir, "giws_50.shp"), delete_layer=TRUE)
 st_write(giws_97, paste0(scratch_dir, "giws_97.shp"), delete_layer=TRUE)
+st_write(giws_95, paste0(scratch_dir, "giws_95.shp"), delete_layer=TRUE)
+st_write(giws_80, paste0(scratch_dir, "giws_80.shp"), delete_layer=TRUE)
 st_write(giws_70, paste0(scratch_dir, "giws_70.shp"), delete_layer=TRUE)
+st_write(giws_50, paste0(scratch_dir, "giws_50.shp"), delete_layer=TRUE)
 st_write(giws_25, paste0(scratch_dir, "giws_25.shp"), delete_layer=TRUE)
 
 #3.3 Filter depressions---------------------------------------------------------
+
+#Filter by attributes for the 97% stochastic threshold
+wbt_polygon_perimeter(
+  input="giws_97.shp", 
+  wd = scratch_dir)
+wbt_polygon_area(
+  input="giws_97.shp", 
+  wd = scratch_dir)
+giws_97<-st_read(paste0(scratch_dir, "giws_97.shp")) %>% 
+  mutate(p_a_ratio = AREA/PERIMETER)
+
+#Filter by area and P:A Ratio for the 95% stochastic threshold
+wbt_polygon_perimeter(
+  input="giws_95.shp", 
+  wd = scratch_dir)
+wbt_polygon_area(
+  input="giws_95.shp", 
+  wd = scratch_dir)
+giws_95<-st_read(paste0(scratch_dir, "giws_95.shp"))
+giws_95<-giws_95 %>%
+  #Remove oddly large depressions
+  filter(AREA<1e5) %>%
+  #Remove ditched depressions
+  mutate(p_a_ratio = AREA/PERIMETER) %>%
+  filter(p_a_ratio>2)
 
 #Filter by area and P:A Ratio for 80% stochastic threshold
 wbt_polygon_perimeter(
@@ -220,20 +254,22 @@ giws_80<-giws_80 %>%
   mutate(p_a_ratio = AREA/PERIMETER) %>%
   filter(p_a_ratio>2)
 
-#Filter by area and P:A Ratio for the 95% stochastic threshold
-  wbt_polygon_perimeter(
-    input="giws_95.shp", 
-    wd = scratch_dir)
-  wbt_polygon_area(
-    input="giws_95.shp", 
-    wd = scratch_dir)
-  giws_95<-st_read(paste0(scratch_dir, "giws_95.shp"))
-  giws_95<-giws_95 %>%
-    #Remove oddly large depressions
-    filter(AREA<1e5) %>%
+#Filter by attributes for the 70% stochastic threshold
+wbt_polygon_perimeter(
+  input="giws_70.shp", 
+  wd = scratch_dir)
+wbt_polygon_area(
+  input="giws_70.shp", 
+  wd = scratch_dir)
+giws_70<-st_read(paste0(scratch_dir, "giws_70.shp"))
+giws_70<-giws_70 %>%
+  #Remove small depressions
+  filter(AREA>250) %>%
+  #Remove oddly large depressions
+  filter(AREA<1e5) %>%
   #Remove ditched depressions
-  mutate(p_a_ratio = AREA/PERIMETER) %>%
-    filter(p_a_ratio>2)
+  mutate(p_a_ratio = AREA/PERIMETER)
+# filter(p_a_ratio>2)
   
 #Filter by attributes for the 50% stochastic threshold
   wbt_polygon_perimeter(
@@ -251,34 +287,6 @@ giws_80<-giws_80 %>%
     #Remove ditched depressions
     mutate(p_a_ratio = AREA/PERIMETER)
     # filter(p_a_ratio>2)
-  
-#Filter by attributes for the 70% stochastic threshold
-  wbt_polygon_perimeter(
-    input="giws_70.shp", 
-    wd = scratch_dir)
-  wbt_polygon_area(
-    input="giws_70.shp", 
-    wd = scratch_dir)
-  giws_70<-st_read(paste0(scratch_dir, "giws_70.shp"))
-  giws_70<-giws_70 %>%
-    #Remove small depressions
-    filter(AREA>250) %>%
-    #Remove oddly large depressions
-    filter(AREA<1e5) %>%
-    #Remove ditched depressions
-    mutate(p_a_ratio = AREA/PERIMETER)
-  # filter(p_a_ratio>2)
-  
-  
-#Filter by attributes for the 97% stochastic threshold
-  wbt_polygon_perimeter(
-    input="giws_97.shp", 
-    wd = scratch_dir)
-  wbt_polygon_area(
-    input="giws_97.shp", 
-    wd = scratch_dir)
-  giws_97<-st_read(paste0(scratch_dir, "giws_97.shp")) %>% 
-    mutate(p_a_ratio = AREA/PERIMETER)
   
 #Filter by attributes for the 25% stochastic threshold
   wbt_polygon_perimeter(
@@ -302,25 +310,30 @@ giws_80<-giws_80 %>%
 p <- "+proj=utm +zone=17 +ellps=GRS80 +datum=NAD83 +units=m +no_defs"
    
 st_crs(giws_97) <- p
-st_crs(giws_25) <- p
-st_crs(giws_50) <- p
-st_crs(giws_80) <- p
 st_crs(giws_95) <- p
 st_crs(giws_70) <- p
+st_crs(giws_80) <- p
+st_crs(giws_50) <- p
+st_crs(giws_25) <- p
+
 crs(dem) <- p
 
-mapview(giws_50, alpha = 0.1) + mapview(giws_80, alpha = 0.4) +
-mapview(giws_95, alpha = 0.6) + mapview(giws_70, alpha = 0.25) + mapview(giws_25, alpha = 0.05) + mapview(dem)
+mapview(giws_97, alpha = 0.6) +
+  mapview(giws_95, alpha = 0.5) +
+  mapview(giws_80, alpha = 0.4) +
+  mapview(giws_70, alpha = 0.25) +
+  mapview(giws_50, alpha = 0.1) + 
+  mapview(giws_25, alpha = 0.05) + 
+  mapview(dem)
 
 #3.4 Connect depressions to research sites -------------------------------------
 
 #Give ID based on row number
-giws_50$WetID<-seq(1, nrow(giws_50))
-giws_80$WetID<-seq(1, nrow(giws_80))
-giws_95$WetID<-seq(1, nrow(giws_95))
 giws_97$WetID<-seq(1, nrow(giws_97))
+giws_95$WetID<-seq(1, nrow(giws_95))
+giws_80$WetID<-seq(1, nrow(giws_80))
 giws_70$WetID<-seq(1, nrow(giws_70))
-
+giws_50$WetID<-seq(1, nrow(giws_50))
 
 #Create function to find giw closest to each point
 site_fun<-function(n){
@@ -348,6 +361,42 @@ site_fun<-function(n){
 
 #Apply site matching function to each stochastic threshold
 
+#97% threshold
+giws_x <- giws_97
+site_giw<-lapply(FUN = site_fun, 
+                 X = seq(1, nrow(sites))) %>%
+  bind_rows()
+giws_97_matched <- left_join(giws_97, site_giw) %>% drop_na()
+#Clean up environment
+rm(giws_97, giws_x, site_giw)
+
+#95% threshold
+giws_x <- giws_95
+site_giw<-lapply(FUN = site_fun, 
+                 X = seq(1, nrow(sites))) %>%
+  bind_rows()
+giws_95_matched <- left_join(giws_95, site_giw) %>% drop_na()
+#Clean up environment
+rm(giws_95, giws_x, site_giw)
+
+#80% threshold
+giws_x <- giws_80 
+site_giw<-lapply(FUN = site_fun, 
+                 X = seq(1, nrow(sites))) %>%
+  bind_rows()
+giws_80_matched <- left_join(giws_80, site_giw) %>% drop_na()
+#Clean up environment
+rm(giws_80, giws_x, site_giw)
+
+#70% threshold
+giws_x <- giws_70
+site_giw<-lapply(FUN = site_fun, 
+                 X = seq(1, nrow(sites))) %>%
+  bind_rows()
+giws_70_matched <- left_join(giws_70, site_giw) %>% drop_na()
+#Clean up environment
+rm(giws_70, giws_x, site_giw)
+
 #50% threshold
 giws_x <- giws_50
 site_giw<-lapply(FUN = site_fun, 
@@ -356,42 +405,6 @@ site_giw<-lapply(FUN = site_fun,
 giws_50_matched <-left_join(giws_50, site_giw) %>% drop_na()
 #Clean up environment
 rm(giws_50, giws_x, site_giw)
-
-#80% threshold
-giws_x <- giws_80 
-site_giw<-site_giw<-lapply(FUN = site_fun, 
-                           X = seq(1, nrow(sites))) %>%
-  bind_rows()
-giws_80_matched <- left_join(giws_80, site_giw) %>% drop_na()
-#Clean up environment
-rm(giws_80, giws_x, site_giw)
-
-#95% threshold
-giws_x <- giws_95
-site_giw<-site_giw<-lapply(FUN = site_fun, 
-                           X = seq(1, nrow(sites))) %>%
-  bind_rows()
-giws_95_matched <- left_join(giws_95, site_giw) %>% drop_na()
-#Clean up environment
-rm(giws_95, giws_x, site_giw)
-
-#97% threshold
-giws_x <- giws_97
-site_giw<-site_giw<-lapply(FUN = site_fun, 
-                           X = seq(1, nrow(sites))) %>%
-  bind_rows()
-giws_97_matched <- left_join(giws_97, site_giw) %>% drop_na()
-#Clean up environment
-rm(giws_97, giws_x, site_giw)
-
-#70% threshold
-giws_x <- giws_70
-site_giw<-site_giw<-lapply(FUN = site_fun, 
-                           X = seq(1, nrow(sites))) %>%
-  bind_rows()
-giws_70_matched <- left_join(giws_70, site_giw) %>% drop_na()
-#Clean up environment
-rm(giws_70, giws_x, site_giw)
 
 # Look at mapview
 mapview(giws_50_matched) + mapview(giws_80_matched) + 
@@ -445,6 +458,18 @@ inundation_fun<-function(n){
   df
 }
 
+# Inundation function for 97% threshold (low water; NO merged sites)
+z_low <- 0
+z_high <- 1.25
+
+giws_x <- giws_97_matched
+
+inundate_97 <- lapply(FUN = inundation_fun,
+                      X = seq(1, nrow(giws_x))) %>% 
+  bind_rows()
+#Clean up environment
+rm(z_low, z_high, giws_x)
+
 # Inundation function for 80% threshold (low water; NO merged sites)
 z_low <- 0
 z_high <- 1.25
@@ -484,6 +509,22 @@ rm(z_low, z_high, giws_x)
 
 # 4.3 Quick check ---------------------------------------------------------
 
+#97% threshold
+hipso_plot_97 <- ggplot(data = inundate_97 %>% 
+                          filter(Site_ID %in% c("TS-SW", "BD-SW", "DK-SW", "ND-SW",
+                                                "FN-SW")),
+                        mapping = aes(x = z,
+                                      y = area_m,
+                                      color = Site_ID)) +
+  geom_line(size = 1.5) +
+  scale_y_continuous() +
+  # scale_x_continuous(limits = c(0,1.1)) +
+  theme_bw()
+
+(hipso_plot_97)
+
+
+#80% threshold
 hipso_plot <- ggplot(data = inundate_80 %>% 
                        filter(Site_ID %in% c("TS-SW", "BD-SW", "DK-SW", "ND-SW",
                                              "FN-SW")),
@@ -497,5 +538,9 @@ theme_bw()
 
 (hipso_plot)
 
+
 #6.0 Export --------------------------------------------------------------------
+write_csv(inundate_97, "docs/stage_area_relationships_97.csv")
 write_csv(inundate_80, "docs/stage_area_relationships.csv")
+
+
